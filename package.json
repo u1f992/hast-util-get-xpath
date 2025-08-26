@@ -5,9 +5,9 @@
   "main": "dist/index.js",
   "scripts": {
     "lint": "eslint --fix src/**/*.ts",
-    "format": "npm run lint && prettier --write src/**/*.ts",
-    "build": "npm run format && tsc",
-    "test": "npm run build && node --test"
+    "format": "prettier --write src/**/*.ts",
+    "build": "tsc",
+    "test": "node --test"
   },
   "keywords": [],
   "author": "Koutaro Mukai",

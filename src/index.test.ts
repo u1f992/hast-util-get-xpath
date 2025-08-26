@@ -1,10 +1,10 @@
 import { getXPath } from "./index.js";
 
-import type { Element, ElementContent, Root, Text } from "hast";
+import type * as hast from "hast";
 import assert from "node:assert";
 import test from "node:test";
 
-function createElement(tagName: string): Element {
+function createElement(tagName: string): hast.Element {
   return {
     type: "element",
     tagName,
@@ -13,18 +13,21 @@ function createElement(tagName: string): Element {
   };
 }
 
-function createTextNode(value: string): Text {
+function createTextNode(value: string): hast.Text {
   return {
     type: "text",
     value,
   };
 }
 
-function appendChild(parent: Element, child: Readonly<ElementContent>) {
+function appendChild(
+  parent: hast.Element,
+  child: Readonly<hast.ElementContent>,
+) {
   parent.children.push(child);
 }
 
-function createDocument(): Root {
+function createDocument(): hast.Root {
   return {
     type: "root",
     children: [
@@ -45,9 +48,38 @@ function createDocument(): Root {
   };
 }
 
-function getBody(doc: Root): Element {
-  return (doc.children[0]! as Element).children[0]! as Element;
+function getBody(doc: hast.Root): hast.Element {
+  return (doc.children[0]! as hast.Element).children[0]! as hast.Element;
 }
+
+test("from README.md", () => {
+  const div: hast.Element = {
+    type: "element",
+    tagName: "div",
+    properties: {},
+    children: [],
+  };
+  const doc: hast.Root = {
+    type: "root",
+    children: [
+      {
+        type: "element",
+        tagName: "html",
+        properties: {},
+        children: [
+          {
+            type: "element",
+            tagName: "body",
+            properties: {},
+            children: [div],
+          },
+        ],
+      },
+    ],
+  };
+
+  assert.strictEqual(getXPath(doc, div), "/html/body/div");
+});
 
 test("root element", () => {
   const doc = createDocument();
@@ -170,4 +202,31 @@ test("element with two text nodes", () => {
   appendChild(getBody(doc), div);
   const r = getXPath(doc, text2);
   assert.strictEqual(r, "/html/body/div/text()[2]");
+});
+
+test("comment", () => {
+  const doc = createDocument();
+
+  const div = createElement("div");
+  const comment: hast.Comment = { type: "comment", value: "__comment__" };
+  appendChild(div, comment);
+  appendChild(getBody(doc), div);
+  const r = getXPath(doc, comment);
+  assert.strictEqual(r, "/html/body/div/comment()[1]");
+});
+
+test("indexing text() and comment() counts only same-type siblings", () => {
+  const doc = createDocument();
+  const div = createElement("div");
+  const t1 = createTextNode("A");
+  const c1: hast.Comment = { type: "comment", value: "c1" };
+  const t2 = createTextNode("B");
+  appendChild(div, t1);
+  appendChild(div, c1);
+  appendChild(div, t2);
+  appendChild(getBody(doc), div);
+
+  assert.strictEqual(getXPath(doc, t1), "/html/body/div/text()[1]");
+  assert.strictEqual(getXPath(doc, c1), "/html/body/div/comment()[1]");
+  assert.strictEqual(getXPath(doc, t2), "/html/body/div/text()[2]");
 });

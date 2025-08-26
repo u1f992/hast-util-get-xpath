@@ -1,6 +1,6 @@
 import type { Element } from "hast";
 
-export function attributeToString(
+export function getAttribute(
   element: Element,
   qualifiedName: string,
 ): string | null {

@@ -1,26 +1,37 @@
-import type { ElementContent, Root } from "hast";
-import { attributeToString } from "./attribute-to-string.js";
+import type * as hast from "hast";
+import { getAttribute } from "./get-attribute.js";
 
-export interface Options {
+export type Options = {
   ignoreId: boolean;
-}
+};
 
 const defaultOptions: Options = {
   ignoreId: false,
 };
 
+export type XPathSelectableContent = hast.Element | hast.Comment | hast.Text;
+export function isXPathSelectable(
+  content: hast.Content,
+): content is XPathSelectableContent {
+  return (
+    content.type === "element" ||
+    content.type === "text" ||
+    content.type === "comment"
+  );
+}
+
 export function getXPath(
-  doc: Readonly<Root>,
-  el: Readonly<Root> | Readonly<ElementContent>,
+  doc: Readonly<hast.Root>,
+  el: Readonly<hast.Root> | Readonly<XPathSelectableContent>,
   customOptions?: Partial<Options>,
 ): string | null {
   const options = { ...defaultOptions, ...customOptions };
 
-  if (((_): _ is Readonly<Root> => doc === _)(el)) {
+  if (((_): _ is Readonly<hast.Root> => doc === _)(el)) {
     return "/";
   }
 
-  const path = findPath(doc, el);
+  const path = findParents(doc, el);
   if (path.length === 0) {
     return null;
   }
@@ -31,134 +42,97 @@ export function getXPath(
     "properties" in el && // FIXME: remove confirmation of existence of properties for hast@3
     "id" in el.properties!
   ) {
-    const id = attributeToString(el, "id");
+    const id = getAttribute(el, "id");
     if (id !== null && id !== "") {
       return `//*[@id="${id}"]`;
     }
   }
 
   const parts: string[] = [];
-  let parent: Readonly<Root> | Readonly<ElementContent> = doc;
+  let parent: Readonly<hast.Parent> | Readonly<XPathSelectableContent> = doc;
   for (const node of path) {
-    if (node.type === "text") {
-      const textIndex = getTextNodeIndex(parent, node);
-      parts.push(`text()[${textIndex}]`);
-    } else if (node.type === "element") {
-      const elementIndex = getElementIndex(parent, node);
+    if (!("children" in node)) {
+      const index = getIndexOf(parent, node, (a, b) => a.type === b.type);
+      parts.push(`${node.type}()[${index}]`);
+      break;
+    } else {
+      const index = getIndexOf(
+        parent,
+        node,
+        (a, b) => "tagName" in a && a.tagName === b.tagName,
+      );
       const hasMultipleSameTagSiblings =
-        elementIndex > 1 || hasNextSameSibling(parent, node);
-      const indexSuffix = hasMultipleSameTagSiblings ? `[${elementIndex}]` : "";
+        index > 1 || hasNextSameTagSibling(parent, node);
+      const indexSuffix = hasMultipleSameTagSiblings ? `[${index}]` : "";
       parts.push(`${node.tagName}${indexSuffix}`);
     }
     parent = node;
   }
 
-  return parts.length ? "/" + parts.join("/") : "";
+  return parts.length ? "/" + parts.join("/") : null;
 }
 
-function findPath(
-  doc: Readonly<Root>,
-  target: Readonly<ElementContent>,
-): Readonly<ElementContent>[] {
-  const path: Readonly<ElementContent>[] = [];
-
-  function traverse(
-    node: Readonly<Root> | Readonly<ElementContent>,
-    currentPath: Readonly<ElementContent>[],
-  ): boolean {
-    if (node === target) {
-      path.push(...currentPath, node);
-      return true;
+function findParents(
+  doc: Readonly<hast.Root>,
+  el: Readonly<XPathSelectableContent>,
+) {
+  return (function traverse(
+    node: Readonly<hast.Root> | Readonly<XPathSelectableContent>,
+    parents: readonly Readonly<hast.Element>[],
+  ): [...Readonly<hast.Element>[], Readonly<XPathSelectableContent>] | [] {
+    if (node === el) {
+      return [...parents, node];
     }
-
-    if (node.type === "root" || node.type === "element") {
+    if ("children" in node) {
       for (const child of node.children) {
-        if (child.type === "doctype") {
+        if (!isXPathSelectable(child)) {
           continue;
         }
-        if (
-          traverse(child, [
-            ...currentPath,
-            ...(node.type === "root" ? [] : [node]),
-          ])
-        ) {
-          return true;
+        const ret = traverse(child, [
+          ...parents,
+          ...(node.type === "root" ? [] : [node]),
+        ]);
+        if (ret.length !== 0) {
+          return ret;
         }
       }
     }
-
-    return false;
-  }
-
-  traverse(doc, []);
-  return path;
+    return [];
+  })(doc, []);
 }
 
-function getElementIndex(
-  parent: Readonly<Root> | Readonly<ElementContent>,
-  target: Readonly<ElementContent>,
-): number {
-  if (parent.type !== "root" && parent.type !== "element") {
-    return 1;
-  }
-
+function getIndexOf<T extends Readonly<hast.Content>>(
+  parent: Readonly<hast.Parent>,
+  target: T,
+  predicate: (node: Readonly<hast.Content>, target: T) => boolean,
+) {
   let index = 1;
   for (const child of parent.children) {
     if (child === target) {
       return index;
     }
-    if (
-      child.type === "element" &&
-      target.type === "element" &&
-      child.tagName === target.tagName
-    ) {
+    if (predicate(child, target)) {
       index++;
     }
   }
-  return 1;
+  throw new Error("assertion failed");
 }
 
-function getTextNodeIndex(
-  parent: Readonly<Root> | Readonly<ElementContent>,
-  target: Readonly<ElementContent>,
-): number {
-  if (parent.type !== "root" && parent.type !== "element") {
-    return 1;
-  }
-
-  let index = 1;
-  for (const child of parent.children) {
-    if (child === target) {
-      return index;
-    }
-    if (child.type === "text") {
-      index++;
-    }
-  }
-  return 1;
-}
-
-function hasNextSameSibling(
-  parent: Readonly<Root> | Readonly<ElementContent>,
-  target: Readonly<ElementContent>,
+function hasNextSameTagSibling(
+  parent: Readonly<hast.Parent>,
+  target: Readonly<hast.Element>,
 ): boolean {
-  if (parent.type !== "root" && parent.type !== "element") {
-    return false;
-  }
-
   let foundTarget = false;
   for (const child of parent.children) {
-    if (
-      foundTarget &&
-      child.type === "element" &&
-      target.type === "element" &&
-      child.tagName === target.tagName
-    ) {
+    if (foundTarget && "tagName" in child && child.tagName === target.tagName) {
       return true;
     }
     if (child === target) {
       foundTarget = true;
     }
+  }
+  if (!foundTarget) {
+    throw new Error("assertion failed");
   }
   return false;
 }
