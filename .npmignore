@@ -1,0 +1,8 @@
+src/
+dist/*.test.*
+tsconfig.json
+eslint.config.js
+prettier.config.js
+node_modules/
+.git/
+.github/

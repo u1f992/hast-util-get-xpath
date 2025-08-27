@@ -1,27 +1,32 @@
 {
   "name": "hast-util-get-xpath",
   "version": "0.1.0",
-  "description": "",
+  "description": "Utility to get XPath for hast nodes.",
   "main": "dist/index.js",
+  "types": "dist/index.d.ts",
   "scripts": {
-    "lint": "eslint --fix src/**/*.ts",
-    "format": "prettier --write src/**/*.ts",
+    "lint": "eslint --fix \"src/**/*.ts\"",
+    "format": "prettier --write \"src/**/*.ts\"",
     "build": "tsc",
-    "test": "node --test"
+    "test": "node --test \"dist/**/*.test.js\""
   },
   "keywords": [],
   "author": "Koutaro Mukai",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/u1f992/hast-util-get-xpath.git"
+  },
+  "homepage": "https://github.com/u1f992/hast-util-get-xpath",
   "license": "MIT",
   "type": "module",
   "dependencies": {
-    "@types/hast": "^2.0.0"
+    "@types/hast": "^2.0.0",
+    "hast-util-get-attribute": "^1.0.0"
   },
   "devDependencies": {
     "@eslint/js": "^9.34.0",
     "@types/node": "^24.3.0",
     "eslint": "^9.34.0",
-    "hast-util-from-html": "^1.0.2",
-    "hast-util-to-html": "^8.0.4",
     "prettier": "^3.6.2",
     "typescript": "^5.9.2",
     "typescript-eslint": "^8.41.0"

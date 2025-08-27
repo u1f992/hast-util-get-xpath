@@ -1,5 +1,5 @@
 import type * as hast from "hast";
-import { getAttribute } from "./get-attribute.js";
+import { getAttribute } from "hast-util-get-attribute";
 
 export type Options = {
   ignoreId: boolean;
@@ -53,6 +53,9 @@ export function getXPath(
   for (const node of path) {
     if (!("children" in node)) {
       const index = getIndexOf(parent, node, (a, b) => a.type === b.type);
+      if (index === null) {
+        return null;
+      }
       parts.push(`${node.type}()[${index}]`);
       break;
     } else {
@@ -61,6 +64,9 @@ export function getXPath(
         node,
         (a, b) => "tagName" in a && a.tagName === b.tagName,
       );
+      if (index === null) {
+        return null;
+      }
       const hasMultipleSameTagSiblings =
         index > 1 || hasNextSameTagSibling(parent, node);
       const indexSuffix = hasMultipleSameTagSiblings ? `[${index}]` : "";
@@ -105,7 +111,7 @@ function getIndexOf<T extends Readonly<hast.Content>>(
   parent: Readonly<hast.Parent>,
   target: T,
   predicate: (node: Readonly<hast.Content>, target: T) => boolean,
-) {
+): number | null {
   let index = 1;
   for (const child of parent.children) {
     if (child === target) {
@@ -115,13 +121,13 @@ function getIndexOf<T extends Readonly<hast.Content>>(
       index++;
     }
   }
-  throw new Error("assertion failed");
+  return null;
 }
 
 function hasNextSameTagSibling(
   parent: Readonly<hast.Parent>,
   target: Readonly<hast.Element>,
-): boolean {
+): boolean | null {
   let foundTarget = false;
   for (const child of parent.children) {
     if (foundTarget && "tagName" in child && child.tagName === target.tagName) {
@@ -131,8 +137,5 @@ function hasNextSameTagSibling(
       foundTarget = true;
     }
   }
-  if (!foundTarget) {
-    throw new Error("assertion failed");
-  }
-  return false;
+  return foundTarget ? false : null;
 }
