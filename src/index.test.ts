@@ -109,7 +109,7 @@ test("element with id", () => {
   const doc = createDocument();
 
   const e = createElement("span");
-  setAttribute(e, "id", "foo");
+  e.properties = setAttribute(e, "id", "foo");
   appendChild(getBody(doc), e);
   const r = getXPath(doc, e);
   assert.strictEqual(r, '//*[@id="foo"]');
@@ -119,10 +119,34 @@ test("element with id and ignoreId options is on", () => {
   const doc = createDocument();
 
   const e = createElement("span");
-  setAttribute(e, "id", "foo");
+  e.properties = setAttribute(e, "id", "foo");
   appendChild(getBody(doc), e);
   const r = getXPath(doc, e, { ignoreId: true });
   assert.strictEqual(r, "/html/body/span");
+});
+
+test("normalizes HTML id aliases without mutating readonly input", () => {
+  const doc = createDocument();
+  const e = createElement("span");
+  e.properties = Object.freeze({ ID: "foo", class: "bar baz" });
+  appendChild(getBody(doc), e);
+  Object.freeze(e);
+
+  assert.strictEqual(getXPath(doc, e), '//*[@id="foo"]');
+  assert.deepStrictEqual(e.properties, { ID: "foo", class: "bar baz" });
+});
+
+test("resolves SVG id aliases without mutating readonly input", () => {
+  const doc = createDocument();
+  const svg = createElement("svg");
+  const e = createElement("g");
+  e.properties = Object.freeze({ ID: "foo" });
+  appendChild(svg, e);
+  appendChild(getBody(doc), svg);
+  Object.freeze(e);
+
+  assert.strictEqual(getXPath(doc, e), '//*[@id="foo"]');
+  assert.deepStrictEqual(e.properties, { ID: "foo" });
 });
 
 test("single leaf element", () => {

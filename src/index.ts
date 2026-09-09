@@ -37,7 +37,7 @@ export function getXPath(
   }
 
   if (!options.ignoreId && el.type === "element") {
-    const id = getAttribute(el, "id");
+    const id = getAttribute(el, "id", { root: doc });
     if (id !== null && id !== "") {
       return `//*[@id="${id}"]`;
     }
