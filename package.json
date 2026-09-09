@@ -1,6 +1,6 @@
 {
   "name": "hast-util-get-xpath",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Utility to get XPath for hast nodes.",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
