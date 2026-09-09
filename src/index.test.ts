@@ -1,6 +1,7 @@
 import { getXPath } from "./index.js";
 
 import type * as hast from "hast";
+import { setAttribute } from "hast-util-dom-attributes";
 import assert from "node:assert";
 import test from "node:test";
 
@@ -108,7 +109,7 @@ test("element with id", () => {
   const doc = createDocument();
 
   const e = createElement("span");
-  e.properties!.id = "foo"; // FIXME: remove ! for hast@3
+  setAttribute(e, "id", "foo");
   appendChild(getBody(doc), e);
   const r = getXPath(doc, e);
   assert.strictEqual(r, '//*[@id="foo"]');
@@ -118,7 +119,7 @@ test("element with id and ignoreId options is on", () => {
   const doc = createDocument();
 
   const e = createElement("span");
-  e.properties!.id = "foo"; // FIXME: remove ! for hast@3
+  setAttribute(e, "id", "foo");
   appendChild(getBody(doc), e);
   const r = getXPath(doc, e, { ignoreId: true });
   assert.strictEqual(r, "/html/body/span");

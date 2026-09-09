@@ -1,5 +1,5 @@
 import type * as hast from "hast";
-import { getAttribute } from "hast-util-get-attribute";
+import { getAttribute } from "hast-util-dom-attributes";
 
 export type Options = {
   ignoreId: boolean;
@@ -36,12 +36,7 @@ export function getXPath(
     return null;
   }
 
-  if (
-    !options.ignoreId &&
-    el.type === "element" &&
-    "properties" in el && // FIXME: remove confirmation of existence of properties for hast@3
-    "id" in el.properties!
-  ) {
+  if (!options.ignoreId && el.type === "element") {
     const id = getAttribute(el, "id");
     if (id !== null && id !== "") {
       return `//*[@id="${id}"]`;
