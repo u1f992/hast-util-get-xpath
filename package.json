@@ -21,7 +21,7 @@
   "type": "module",
   "dependencies": {
     "@types/hast": "^2.0.0",
-    "hast-util-dom-attributes": "^2.0.0"
+    "hast-util-dom-attributes": "^3.0.0"
   },
   "devDependencies": {
     "@eslint/js": "^9.34.0",
